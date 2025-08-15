@@ -1,7 +1,7 @@
 {
     "slug": "moddash-notifier",
     "name": "ModDash Notifier",
-    "version": "0.9.2",
+    "version": "0.9.3",
     "author": "reallyusefulplugins.com",
     "author_homepage": "https://reallyusefulplugins.com",
     "requires_php": "8.1",
@@ -11,9 +11,9 @@
         "description": "ModDash Notifier - SureDash Comment Notification Plugin - Get Notifications by Slack, Email and Discord.",
         "installation": "1. Upload the `moddash-notifier` folder to the `/wp-content/plugins/` directory.<br />\r\n2. Activate the plugin through the 'Plugins' menu in WordPress.<br />\r\n3. Its now ready to use",
         "frequently_asked_questions": "= How do I add use the plugin? =<br />\r\nYou need to call the required functions in Flowmattic or your Automator of choice as needed<br />\r\n<br />\r\n= Why does ModDash Notifier only work with the community-post post type? =<br />\r\nModDash Notifier was built for SureDash-powered communities, which use the community-post custom post type for discussions. This focus ensures that notifications are only sent for the relevant comments moderators care about, rather than every comment on your WordPress site.<br />\r\n<br />\r\n= Can I use ModDash Notifier with regular WordPress comments or blog posts =<br />\r\nNo. The plugin is designed to trigger only for comments on community-post items. It won\u2019t activate for standard WordPress posts or other content types to avoid unnecessary notifications outside your SureDash workflow.<br />\r\n<br />\r\n= How do I connect ModDash Notifier to Slack or Discord for comment alerts? =<br />\r\nGo to Settings \u2192 Discussion in your WordPress dashboard. Under the Slack and Discord sections, check Enable and paste your Incoming Webhook URL. Once saved, new pending comments on community-post items will appear in those channels with action buttons for quick moderation.<br />\r\n<br />\r\n= Do moderators need special permissions to receive and act on notifications =<br />\r\nYes. Only WordPress users with the moderate_comments capability can be selected as notification recipients. This ensures only authorized moderators can approve, unapprove, mark as spam, or trash comments from email, Slack, or Discord links.<br />\r\n<br />\r\n= How fast will notifications be delivered after a comment is posted? =<br />\r\nNotifications are queued and sent by WP-Cron approximately 15 seconds after a comment is submitted. This keeps comment submissions fast for visitors while ensuring moderators get near real-time alerts.<br />\r\n<br />\r\n= What happens if a moderator clicks an action link but isn\u2019t logged in? = <br />\r\nIf you\u2019re not logged in when clicking a moderation link, the plugin will redirect you to the login page and then return you to the requested action. It also regenerates a fresh, secure nonce so the action can complete successfully after login.",
-        "changelog": "<h4>0.9.2 15 August 2025</h4><ul><li>New: Initial launch</li><li>New: Slack Notification</li><li>New: Discord Notification</li><li>New: Prep for Automatic Update Test</li></ul>"
+        "changelog": "<h4>0.9.3 15 August 2025</h4><ul><li>New: Automatic Update Test</li></ul><h4>0.9.2 15 August 2025</h4><ul><li>New: Initial launch</li><li>New: Slack Notification</li><li>New: Discord Notification</li><li>New: Prep for Automatic Update Test</li></ul>"
     },
-    "last_updated": "2025-08-15 11:00:54",
+    "last_updated": "2025-08-15 11:02:25",
     "download_url": "https://github.com/stingray82/moddash-notifier/releases/latest/download/moddash-notifier.zip",
     "banners": {
         "low": "https://raw.githubusercontent.com/stingray82/moddash-notifier/main/uupd/banner-772x250.png",
