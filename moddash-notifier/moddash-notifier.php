@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name:       ModDash Notifier
- * Description:       SureDash Comment Notification Plugin - Get Notifications by Slack, Email and Discord.
- * Tested up to:      6.8.2
+ * Description:       SureDash Comment Notification Plugin - Get Notifications by Slack, Email, Discord & Telegram.
+ * Tested up to:      6.8.3
  * Requires at least: 6.5
  * Requires PHP:      8.1
- * Version:           0.9.4
+ * Version:           1.0
  * Author:            reallyusefulplugins.com
  * Author URI:        https://reallyusefulplugins.com
  * License:           GPL2
@@ -15,7 +15,7 @@
  */
 
 // Define plugin constants
-define('RUP_MODDASH_NOTIFIER_VERSION', '0.9.4');
+define('RUP_MODDASH_NOTIFIER_VERSION', '1.0');
 define('RUP_MODDASH_NOTIFIER_SLUG', 'moddash-notifier'); // Replace with your unique slug if needed
 define('RUP_MODDASH_NOTIFIER_MAIN_FILE', __FILE__);
 define('RUP_MODDASH_NOTIFIER_DIR', plugin_dir_path(__FILE__));
@@ -34,7 +34,7 @@ add_action( 'admin_init', function () {
 		'community_post_notify_section',
 		'Community Post Moderators',
 		function () {
-			echo '<p>Select users to receive notifications for <code>community-post</code> comments awaiting moderation, and optionally enable Slack/Discord webhooks.</p>';
+			echo '<p>Select users to receive notifications for <code>community-post</code> comments awaiting moderation, and optionally enable Slack/Discord/Telegram notifications. You can enter <strong>multiple</strong> Slack/Discord webhooks and <strong>multiple</strong> Telegram chat IDs (comma or newline separated).</p>';
 		},
 		'discussion'
 	);
@@ -82,9 +82,13 @@ add_action( 'admin_init', function () {
 		'sanitize_callback' => fn($v) => (bool) $v,
 		'default'           => false,
 	] );
+	// Allow multiple webhooks (comma/newline). Sanitize lightly; validate per-URL at send time.
 	register_setting( 'discussion', 'cpn_slack_webhook', [
 		'type'              => 'string',
-		'sanitize_callback' => 'esc_url_raw',
+		'sanitize_callback' => function( $v ){
+			$v = is_string($v) ? $v : '';
+			return preg_replace('#[^\w\-\.:\/?,=&%\s,]#u', '', $v);
+		},
 		'default'           => '',
 	] );
 
@@ -93,13 +97,13 @@ add_action( 'admin_init', function () {
 		'Slack notifications',
 		function () {
 			$enabled = (bool) get_option( 'cpn_slack_enabled', false );
-			$url     = (string) get_option( 'cpn_slack_webhook', '' );
+			$urls    = (string) get_option( 'cpn_slack_webhook', '' );
 			echo '<label><input type="checkbox" name="cpn_slack_enabled" value="1" '.checked( $enabled, true, false ).'> Enable Slack</label><br />';
 			printf(
-				'<input type="url" name="cpn_slack_webhook" value="%s" placeholder="https://hooks.slack.com/services/XXX/YYY/ZZZ" style="width:100%%;max-width:560px;">',
-				esc_attr( $url )
+				'<textarea name="cpn_slack_webhook" rows="3" style="width:100%%;max-width:560px;" placeholder="One or more webhook URLs, comma or newline separated">%s</textarea>',
+				esc_textarea( $urls )
 			);
-			echo '<p class="description">Incoming Webhook URL for the Slack channel. Buttons are simple links (no app required).</p>';
+			echo '<p class="description">Supports multiple Slack webhooks. Buttons are simple links (no app required).</p>';
 		},
 		'discussion',
 		'community_post_notify_section'
@@ -111,9 +115,13 @@ add_action( 'admin_init', function () {
 		'sanitize_callback' => fn($v) => (bool) $v,
 		'default'           => false,
 	] );
+	// Allow multiple webhooks (comma/newline). Sanitize lightly; validate per-URL at send time.
 	register_setting( 'discussion', 'cpn_discord_webhook', [
 		'type'              => 'string',
-		'sanitize_callback' => 'esc_url_raw',
+		'sanitize_callback' => function( $v ){
+			$v = is_string($v) ? $v : '';
+			return preg_replace('#[^\w\-\.:\/?,=&%\s,]#u', '', $v);
+		},
 		'default'           => '',
 	] );
 
@@ -122,18 +130,96 @@ add_action( 'admin_init', function () {
 		'Discord notifications',
 		function () {
 			$enabled = (bool) get_option( 'cpn_discord_enabled', false );
-			$url     = (string) get_option( 'cpn_discord_webhook', '' );
+			$urls    = (string) get_option( 'cpn_discord_webhook', '' );
 			echo '<label><input type="checkbox" name="cpn_discord_enabled" value="1" '.checked( $enabled, true, false ).'> Enable Discord</label><br />';
 			printf(
-				'<input type="url" name="cpn_discord_webhook" value="%s" placeholder="https://discord.com/api/webhooks/..." style="width:100%%;max-width:560px;">',
-				esc_attr( $url )
+				'<textarea name="cpn_discord_webhook" rows="3" style="width:100%%;max-width:560px;" placeholder="One or more webhook URLs, comma or newline separated">%s</textarea>',
+				esc_textarea( $urls )
 			);
-			echo '<p class="description">Discord channel Webhook URL. Includes link buttons.</p>';
+			echo '<p class="description">Supports multiple Discord webhooks. Includes link buttons.</p>';
 		},
 		'discussion',
 		'community_post_notify_section'
 	);
+
+	// Telegram
+	register_setting( 'discussion', 'cpn_tg_enabled', [
+		'type'              => 'boolean',
+		'sanitize_callback' => fn($v) => (bool) $v,
+		'default'           => false,
+	] );
+	register_setting( 'discussion', 'cpn_tg_bot_token', [
+		'type'              => 'string',
+		'sanitize_callback' => function( $v ) { // keep token as-is, trim spaces
+			$v = is_string( $v ) ? trim( $v ) : '';
+			return preg_replace( '#[^0-9A-Za-z:_-]#', '', $v ); // light hardening
+		},
+		'default'           => '',
+	] );
+	// Allow multiple chat IDs/usernames (comma/newline)
+	register_setting( 'discussion', 'cpn_tg_chat_id', [
+		'type'              => 'string',
+		'sanitize_callback' => function( $v ){
+			$v = is_string( $v ) ? $v : '';
+			// Allow digits, letters, underscores, @, hyphens, commas and whitespace
+			return preg_replace( '#[^0-9A-Za-z_@,\-\s]#u', '', $v );
+		},
+		'default'           => '',
+	] );
+
+add_settings_field(
+	'cpn_telegram',
+	'Telegram notifications',
+	function () {
+		$enabled   = (bool) get_option( 'cpn_tg_enabled', false );
+		$bot_token = (string) get_option( 'cpn_tg_bot_token', '' );
+		$chat_ids  = (string) get_option( 'cpn_tg_chat_id', '' );
+
+		echo '<label><input type="checkbox" name="cpn_tg_enabled" value="1" ' . checked( $enabled, true, false ) . '> Enable Telegram</label>';
+
+		// Bot token (clearly labelled)
+		echo '<div style="margin-top:10px">';
+		echo '<label for="cpn_tg_bot_token" style="display:block;font-weight:600;margin-bottom:4px;">Bot token (from @BotFather)</label>';
+		printf(
+			'<input id="cpn_tg_bot_token" type="text" name="cpn_tg_bot_token" value="%s" ' .
+			'placeholder="123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" ' .
+			'style="width:100%%;max-width:560px;display:block;font-family:monospace;" />',
+			esc_attr( $bot_token )
+		);
+		echo '</div>';
+
+		// Chat IDs (clearly labelled + multi support)
+		echo '<div style="margin-top:10px">';
+		echo '<label for="cpn_tg_chat_id" style="display:block;font-weight:600;margin-bottom:4px;">Chat IDs / @usernames (one or more)</label>';
+		printf(
+			'<textarea id="cpn_tg_chat_id" name="cpn_tg_chat_id" rows="3" ' .
+			'style="width:100%%;max-width:560px;display:block;font-family:monospace;" ' .
+			'placeholder="Examples:
+123456789
+-1001234567890
+@channelusername
+(Comma or newline separated)">%s</textarea>',
+			esc_textarea( $chat_ids )
+		);
+		echo '</div>';
+
+		// Help text
+		echo '<ul class="description" style="margin-top:6px;padding-left:18px;list-style:disc;">';
+		echo '<li>Create a bot with <code>@BotFather</code> and paste the bot token above.</li>';
+		echo '<li>Add the bot to each target chat/channel (admin for channels).</li>';
+		echo '<li>Accepted formats for the right box: numeric user/group IDs (e.g. <code>123456789</code>), channel/supergroup IDs (e.g. <code>-1001234567890</code>), or <code>@channelusername</code>.</li>';
+		echo '<li>You can list multiple chats: put them on separate lines or separate with commas.</li>';
+		echo '<li>Buttons in Telegram are normal URL buttons; you’ll be asked to log in to WordPress if needed.</li>';
+		echo '</ul>';
+	},
+	'discussion',
+	'community_post_notify_section'
+);
+
+
+
 } );
+
 
 /* ================================================================
  * ONE-TAP FRONT-END MODERATION (login redirect + nonce regen)
@@ -236,7 +322,7 @@ function cpn_build_html_email( WP_Post $post, WP_Comment $comment, array $links 
 	$comment_url  = get_comment_link( $comment );
 	$author_name  = $comment->comment_author ?: 'Anonymous';
 	$author_email = $comment->comment_author_email ?: 'n/a';
-	$submitted    = get_date_from_gmt( gmdate( 'Y-m-d H:i:s', strtotime( $comment->comment_date_gmt ) ), 'Y-m-d H:i' );
+	$submitted = get_date_from_gmt( $comment->comment_date_gmt, 'Y-m-d H:i' );
 	$comment_txt  = wp_strip_all_tags( $comment->comment_content );
 
 	$btnBase = 'display:block;text-align:center;text-decoration:none;font-weight:600;padding:12px 16px;border-radius:8px;margin:6px 0;';
@@ -291,12 +377,13 @@ function cpn_send_email_to_each( array $emails, string $subject, string $html, s
 }
 
 /* ================================================================
- * SLACK + DISCORD HELPERS
+ * SLACK + DISCORD + Telegram HELPERS
  * ================================================================ */
 function cpn_truncate( $text, $len = 400 ) {
-	$text = trim( preg_replace( '/\s+/', ' ', $text ) );
-	return ( strlen( $text ) > $len ) ? mb_substr( $text, 0, $len - 1 ) . '…' : $text;
+  $text = trim( preg_replace( '/\s+/', ' ', $text ) );
+  return ( mb_strlen( $text ) > $len ) ? mb_substr( $text, 0, $len - 1 ) . '…' : $text;
 }
+
 
 function cpn_build_slack_payload( WP_Post $post, WP_Comment $comment, array $links ) : array {
 	$title   = wp_strip_all_tags( get_the_title( $post ) );
@@ -405,6 +492,108 @@ function cpn_http_json_post_with_fallback( string $url, array $primary, array $f
 	}
 }
 
+
+function cpn_build_telegram_message( WP_Post $post, WP_Comment $comment ) : array {
+	$title   = wp_strip_all_tags( get_the_title( $post ) );
+	$postURL = get_permalink( $post );
+	$viewURL = get_comment_link( $comment );
+
+	$commenter = $comment->comment_author ?: 'Anonymous';
+	$email     = $comment->comment_author_email ?: 'n/a';
+	$submitted = get_date_from_gmt( $comment->comment_date_gmt, 'Y-m-d H:i' );
+	$body      = cpn_truncate( wp_strip_all_tags( $comment->comment_content ), 600 );
+
+	// Use HTML parse mode (easier than MarkdownV2 escaping)
+	$text  = '<b>Comment awaiting moderation</b>' . "\n";
+	$text .= 'Post: <a href="' . esc_url( $postURL ) . '">' . esc_html( $title ) . "</a>\n";
+	$text .= 'Commenter: ' . esc_html( $commenter ) . ' &lt;' . esc_html( $email ) . "&gt;\n";
+	$text .= 'Submitted: ' . esc_html( $submitted ) . "\n\n";
+	$text .= '<pre>' . esc_html( $body ) . '</pre>';
+
+	return [
+		'text'                         => $text,
+		'parse_mode'                   => 'HTML',
+		'disable_web_page_preview'     => true,
+	];
+}
+
+function cpn_build_telegram_keyboard( array $links, WP_Comment $comment ) : array {
+	return [
+		'inline_keyboard' => [
+			[
+				[ 'text' => 'Approve',   'url' => $links['front']['approve']   ],
+				[ 'text' => 'Unapprove', 'url' => $links['front']['unapprove'] ],
+			],
+			[
+				[ 'text' => 'Spam',  'url' => $links['front']['spam']  ],
+				[ 'text' => 'Trash', 'url' => $links['front']['trash'] ],
+			],
+			[
+				[ 'text' => 'View',       'url' => get_comment_link( $comment ) ],
+				[ 'text' => 'Open in WP', 'url' => $links['admin']['edit'] ],
+			],
+		],
+	];
+}
+
+/**
+ * Send a Telegram message via Bot API.
+ * $payload should include: chat_id, text, parse_mode, reply_markup, etc.
+ */
+function cpn_http_telegram_send( string $bot_token, array $payload ) : bool {
+	if ( empty( $bot_token ) ) return false;
+	$url = "https://api.telegram.org/bot{$bot_token}/sendMessage";
+
+	$res = wp_remote_post( $url, [
+		'headers' => [ 'Content-Type' => 'application/json; charset=utf-8' ],
+		'body'    => wp_json_encode( $payload ),
+		'timeout' => 5,
+	] );
+	if ( is_wp_error( $res ) ) {
+		error_log( 'CPN telegram error: ' . $res->get_error_message() );
+		return false;
+	}
+	$code = wp_remote_retrieve_response_code( $res );
+	if ( $code < 200 || $code >= 300 ) {
+		error_log( 'CPN telegram HTTP ' . $code . ' body: ' . wp_remote_retrieve_body( $res ) );
+		return false;
+	}
+	$body = json_decode( wp_remote_retrieve_body( $res ), true );
+	if ( ! is_array( $body ) || empty( $body['ok'] ) ) {
+		error_log( 'CPN telegram API not ok: ' . wp_remote_retrieve_body( $res ) );
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Split a comma/newline/whitespace separated string into a unique, trimmed list.
+ */
+function cpn_parse_list( string $raw ) : array {
+	$raw = (string) $raw;
+	$parts = preg_split( '/[,\s]+/u', trim($raw) );
+	$parts = is_array($parts) ? array_filter(array_map('trim', $parts)) : [];
+	return array_values(array_unique($parts));
+}
+
+/**
+ * Parse many URLs from a string, sanitize each, and return valid https URLs.
+ */
+function cpn_parse_urls( string $raw ) : array {
+	$urls = cpn_parse_list( $raw );
+	$out  = [];
+	foreach ( $urls as $u ) {
+		$san = esc_url_raw( $u );
+		if ( $san && str_starts_with( $san, 'https://' ) ) $out[] = $san;
+	}
+	return array_values(array_unique($out));
+}
+
+
+
+
+
+
 /* ================================================================
  * QUEUE ON COMMENT, SEND VIA CRON (~15s)
  * ================================================================ */
@@ -481,27 +670,54 @@ add_action( 'cpn_send_queued_notifications', function() {
 		// Email (one per recipient)
 		cpn_send_email_to_each( $emails, $subject, $html, $alt );
 
-		// Slack (Block Kit buttons)
-		if ( get_option( 'cpn_slack_enabled' ) && ( $slack_url = get_option( 'cpn_slack_webhook' ) ) ) {
-			$payload = cpn_build_slack_payload( $post, $comment, $links );
-			cpn_http_json_post( $slack_url, $payload );
-		}
+		// Slack (to many webhooks)
+			if ( get_option( 'cpn_slack_enabled' ) ) {
+				$urls = cpn_parse_urls( (string) get_option( 'cpn_slack_webhook', '' ) );
+				if ( $urls ) {
+					$payload = cpn_build_slack_payload( $post, $comment, $links );
+					foreach ( $urls as $url ) {
+						cpn_http_json_post( $url, $payload );
+					}
+				}
+			}
 
-		// Discord (buttons via components) with plain-text fallback
-		if ( get_option( 'cpn_discord_enabled' ) && ( $discord_url = get_option( 'cpn_discord_webhook' ) ) ) {
-			$payload  = cpn_build_discord_payload( $post, $comment, $links );
-			$fallback = [
-				'content' => "**Comment awaiting moderation**\n"
-					. get_the_title( $post ) . " — " . get_permalink( $post ) . "\n\n"
-					. cpn_truncate( wp_strip_all_tags( $comment->comment_content ), 600 ) . "\n\n"
-					. "Approve: "   . $links['front']['approve']   . "\n"
-					. "Unapprove: " . $links['front']['unapprove'] . "\n"
-					. "Spam: "      . $links['front']['spam']      . "\n"
-					. "Trash: "     . $links['front']['trash']     . "\n"
-					. "View: "      . get_comment_link( $comment ),
-			];
-			cpn_http_json_post_with_fallback( $discord_url, $payload, $fallback );
-		}
+			// Discord (to many webhooks) with plain-text fallback per webhook
+			if ( get_option( 'cpn_discord_enabled' ) ) {
+				$urls = cpn_parse_urls( (string) get_option( 'cpn_discord_webhook', '' ) );
+				if ( $urls ) {
+					$payload  = cpn_build_discord_payload( $post, $comment, $links );
+					$fallback = [
+						'content' => "**Comment awaiting moderation**\n"
+							. get_the_title( $post ) . " — " . get_permalink( $post ) . "\n\n"
+							. cpn_truncate( wp_strip_all_tags( $comment->comment_content ), 600 ) . "\n\n"
+							. "Approve: "   . $links['front']['approve']   . "\n"
+							. "Unapprove: " . $links['front']['unapprove'] . "\n"
+							. "Spam: "      . $links['front']['spam']      . "\n"
+							. "Trash: "     . $links['front']['trash']     . "\n"
+							. "View: "      . get_comment_link( $comment ),
+					];
+					foreach ( $urls as $url ) {
+						cpn_http_json_post_with_fallback( $url, $payload, $fallback );
+					}
+				}
+			}
+
+			// Telegram (to many chats)
+			if ( get_option( 'cpn_tg_enabled' ) ) {
+				$tg_token = (string) get_option( 'cpn_tg_bot_token' );
+				$chats    = cpn_parse_list( (string) get_option( 'cpn_tg_chat_id', '' ) );
+				if ( $tg_token && $chats ) {
+					$msg      = cpn_build_telegram_message( $post, $comment );
+					$keyboard = cpn_build_telegram_keyboard( $links, $comment );
+					foreach ( $chats as $chat_id ) {
+						$payload = array_merge( $msg, [
+							'chat_id'      => $chat_id,
+							'reply_markup' => $keyboard,
+						] );
+						cpn_http_telegram_send( $tg_token, $payload );
+					}
+				}
+			}
 
 		unset( $queue[$key] ); // done; prevent duplicates
 	}
