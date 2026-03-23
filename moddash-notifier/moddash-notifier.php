@@ -2,10 +2,10 @@
 /**
  * Plugin Name:       ModDash Notifier
  * Description:       SureDash Comment Notification Plugin - Get Notifications by Slack, Email, Discord & Telegram.
- * Tested up to:      6.8.3
+ * Tested up to:      6.9.4
  * Requires at least: 6.5
  * Requires PHP:      8.1
- * Version:           1.0
+ * Version:           1.0.1
  * Author:            reallyusefulplugins.com
  * Author URI:        https://reallyusefulplugins.com
  * License:           GPL2
@@ -15,7 +15,7 @@
  */
 
 // Define plugin constants
-define('RUP_MODDASH_NOTIFIER_VERSION', '1.0');
+define('RUP_MODDASH_NOTIFIER_VERSION', '1.0.1');
 define('RUP_MODDASH_NOTIFIER_SLUG', 'moddash-notifier'); // Replace with your unique slug if needed
 define('RUP_MODDASH_NOTIFIER_MAIN_FILE', __FILE__);
 define('RUP_MODDASH_NOTIFIER_DIR', plugin_dir_path(__FILE__));
@@ -736,12 +736,13 @@ add_action( 'init', function(){ add_post_type_support( 'community-post', 'commen
 //  Updater bootstrap (plugins_loaded priority 1):
 // ──────────────────────────────────────────────────────────────────────────
 add_action( 'plugins_loaded', function() {
-    // 1) Load our universal drop-in. Because that file begins with "namespace UUPD\V1;",
+    // 1) Load our universal drop-in. Because that file begins with "namespace UUPD\V2;",
     //    both the class and the helper live under UUPD\V1.
     require_once __DIR__ . '/inc/updater.php';
 
     // 2) Build a single $updater_config array:
     $updater_config = [
+    	'vendor'      => 'RUP',
         'plugin_file' => plugin_basename(__FILE__),             // e.g. "simply-static-export-notify/simply-static-export-notify.php"
         'slug'        => RUP_MODDASH_NOTIFIER_SLUG,           // must match your updater‐server slug
         'name'        => 'ModDash Notifier',         // human‐readable plugin name
@@ -750,8 +751,8 @@ add_action( 'plugins_loaded', function() {
         'server'      => 'https://raw.githubusercontent.com/stingray82/moddash-notifier/main/uupd/index.json',
     ];
 
-    // 3) Call the helper in the UUPD\V1 namespace:
-    \RUP\Updater\Updater_V1::register( $updater_config );
+    // 3) Call the helper in the UUPD\V2 namespace:
+    \RUP\Updater\Updater_V2::register( $updater_config );
 }, 20 );
 
 // MainWP Icon Filter

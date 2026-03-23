@@ -3,8 +3,8 @@ Contributors: reallyusefulplugins
 Donate link: https://reallyusefulplugins.com/donate
 Tags: Comment Notification,SureDash,Discord,Slack
 Requires at least: 6.5
-Tested up to: 6.8.2
-Stable tag: 0.9.4
+Tested up to: 6.8.3
+Stable tag: 1.0
 Requires PHP: 8.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -45,6 +45,11 @@ Notifications are queued and sent by WP-Cron approximately 15 seconds after a co
 = What happens if a moderator clicks an action link but isn’t logged in? = 
 If you’re not logged in when clicking a moderation link, the plugin will redirect you to the login page and then return you to the requested action. It also regenerates a fresh, secure nonce so the action can complete successfully after login.
 == Changelog ==
+= 1.0 4 October 2025 =
+New: Supports Multiple Channel Slack
+New: Added Telegram including Multiple Channels
+New: Supports Multiple Channel Discord
+
 = 0.9.4 15 August 2025 =
 New: Automatic Update Test
 
