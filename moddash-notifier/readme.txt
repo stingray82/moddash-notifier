@@ -3,8 +3,8 @@ Contributors: reallyusefulplugins
 Donate link: https://reallyusefulplugins.com/donate
 Tags: Comment Notification,SureDash,Discord,Slack
 Requires at least: 6.5
-Tested up to: 6.9.4
-Stable tag: 1.0.1
+Tested up to: 7.0.2
+Stable tag: 1.0.2
 Requires PHP: 8.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -45,6 +45,9 @@ Notifications are queued and sent by WP-Cron approximately 15 seconds after a co
 = What happens if a moderator clicks an action link but isn’t logged in? = 
 If you’re not logged in when clicking a moderation link, the plugin will redirect you to the login page and then return you to the requested action. It also regenerates a fresh, secure nonce so the action can complete successfully after login.
 == Changelog ==
+= 1.0.2 24 July 2026 =
+Updated: UUPD Dependency Updated to Version 2.0 Stable
+
 = 1.0.1 23 March 2026 =
 Update: Updater to 2.0-Alpha
 Update: Compatibility

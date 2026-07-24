@@ -2,10 +2,10 @@
 /**
  * Plugin Name:       ModDash Notifier
  * Description:       SureDash Comment Notification Plugin - Get Notifications by Slack, Email, Discord & Telegram.
- * Tested up to:      6.9.4
+ * Tested up to:      7.0.2
  * Requires at least: 6.5
  * Requires PHP:      8.1
- * Version:           1.0.1
+ * Version:           1.0.2
  * Author:            reallyusefulplugins.com
  * Author URI:        https://reallyusefulplugins.com
  * License:           GPL2
@@ -15,7 +15,7 @@
  */
 
 // Define plugin constants
-define('RUP_MODDASH_NOTIFIER_VERSION', '1.0.1');
+define('RUP_MODDASH_NOTIFIER_VERSION', '1.0.2');
 define('RUP_MODDASH_NOTIFIER_SLUG', 'moddash-notifier'); // Replace with your unique slug if needed
 define('RUP_MODDASH_NOTIFIER_MAIN_FILE', __FILE__);
 define('RUP_MODDASH_NOTIFIER_DIR', plugin_dir_path(__FILE__));
